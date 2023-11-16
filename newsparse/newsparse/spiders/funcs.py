@@ -1,10 +1,10 @@
 import sqlite3
+from selenium import webdriver
+from bs4 import BeautifulSoup
+import time
 
 
 def scroll_load(level_depth, load_pause, menu_url, div_tag_class, div_tag, a_tag_class, a_tag):
-    from selenium import webdriver
-    from bs4 import BeautifulSoup
-    import time
     driver = webdriver.Chrome()
     driver.get(menu_url)
     for i in range(level_depth + 1):

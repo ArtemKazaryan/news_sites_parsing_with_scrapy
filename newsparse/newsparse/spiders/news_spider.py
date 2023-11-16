@@ -11,7 +11,7 @@ db_name = 'parsenews.db'
 # Строки 12, 13, 14, 15 и 16 НЕ РАСКОММЕНТИРОВЫВАТЬ!!!
 # Импортируем список кортежей для работы с sqlite3 из  resources.py
 # from .resources import resources
-# Импортируем функцию create_tables_and_add_resources из funcs.py
+# # Импортируем функцию create_tables_and_add_resources из funcs.py
 # from .funcs import create_tables_and_add_resources
 # create_tables_and_add_resources(db_name, resources)
 
@@ -105,6 +105,12 @@ class NewsSpider(scrapy.Spider):
                     yield response.follow(next_page, callback=self.parse)
 
     def parse_news(self, response):
+        # Импортируем модуль для округления в меньшую сторону
+        from math import floor
+        # Импортируем модуль получения даты
+        import datetime
+
+        # Получаем ссылку как атрибут объекта response, переданную  в генераторе функции parse
         link = response.url
 
         # Получение удобочитаемых переменных
@@ -160,10 +166,6 @@ class NewsSpider(scrapy.Spider):
         # Условный блок2
         # Проверка на наличие сложного формата даты и времени
         elif date_str == '(СегодняOrВчераOr%d%b%Y)comma%H:%M':
-            # Импортируем модуль для округления в меньшую сторону
-            from math import floor
-            # Импортируем модуль получения даты
-            import datetime
 
             # Словарь для перевода названия месяца из родительного падежа в двухцифровую запись
             month_dict = {
