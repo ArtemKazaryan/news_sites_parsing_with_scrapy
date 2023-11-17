@@ -1,17 +1,17 @@
-resources = [
-        ('Новостной портал nur.kz', 'https://nur.kz/latest, scrolling 4 2',
-         'block-infinite js-infinite, div, article-preview-category__content, a',
-         'formatted-body__content--wrapper, div',
-         'main-headline js-main-headline, h1', '%Y-%m-%dT%H:%M:%S%z, time::attr(datetime)'),
-        ('Новостной портал scientificrussia.ru',
-         'https://scientificrussia.ru/news, pagination 1134 1130 -1 f"https://scientificrussia.ru/news/{i}"',
-         'image, div, , a',
-         'article-text, div', ', h1', '%Y-%m-%d %H:%M, time::attr(datetime)'),
-        ('Новостной портал tengrinews.kz',
-         'https://tengrinews.kz/news, pagination 1 5 1 f"https://tengrinews.kz/news/page/{i}"',
-         'tn-article-grid, div, tn-link, a',
-         'tn-news-content, div', 'tn-content-title, h1', '(СегодняOrВчераOr%d%b%Y)comma%H:%M, time::text')
-]
+# resources = [
+#         ('Новостной портал nur.kz', 'https://nur.kz/latest, scrolling 4 2',
+#          'block-infinite js-infinite, div, article-preview-category__content, a',
+#          'formatted-body__content--wrapper, div',
+#          'main-headline js-main-headline, h1', '%Y-%m-%dT%H:%M:%S%z, time::attr(datetime)'),
+#         ('Новостной портал scientificrussia.ru',
+#          'https://scientificrussia.ru/news, pagination 1134 1130 -1 f"https://scientificrussia.ru/news/{i}"',
+#          'image, div, , a',
+#          'article-text, div', ', h1', '%Y-%m-%d %H:%M, time::attr(datetime)'),
+#         ('Новостной портал tengrinews.kz',
+#          'https://tengrinews.kz/news, pagination 1 5 1 f"https://tengrinews.kz/news/page/{i}"',
+#          'tn-article-grid, div, tn-link, a',
+#          'tn-news-content, div', 'tn-content-title, h1', '(СегодняOrВчераOr%d%b%Y)comma%H:%M, time::text')
+# ]
 
 
 # Резервные переменные
@@ -39,3 +39,38 @@ resources = [
 # bottom_tag = 'tn-news-content, div'
 # title_cut = 'tn-content-title, h1'
 # date_cut = '(СегодняOrВчераOr%d%b%Y)comma%H:%M, time::text'
+
+
+
+
+
+import yaml
+with open("nurkz.yaml") as file:
+    loaded_yaml = yaml.load(file, Loader=yaml.FullLoader)
+    print(loaded_yaml['extract_samples']['fields'])
+    print(loaded_yaml)
+    print(loaded_yaml['configuration']['settings']['crawl_strategy']['type'])
+# for key, value in loaded_yaml.items():
+#     print(f"{key}: {value}")
+# print()
+
+
+
+# from dateparser import parse
+# date_string = 'Вчера, 13:26'
+# try:
+#     date = parse(date_string)
+#     print(date)
+# except:
+#     print('Дата не может быть разобрана')
+
+# import time
+# from dateutil.relativedelta import relativedelta
+# from dateparser.parse import parse
+
+# import time
+# from dateparser import parse
+# date_string='Вчера, 13:31'
+# date = parse(date_string)
+# print(int(time.mktime(date.timetuple())))
+# print(date.strftime('%d-%m-%Y'))

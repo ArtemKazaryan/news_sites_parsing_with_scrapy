@@ -15,6 +15,7 @@ NEWSPIDER_MODULE = "newsparse.spiders"
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "newsparse (+http://www.yourdomain.com)"
+USER_AGENT: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -53,6 +54,18 @@ ROBOTSTXT_OBEY = True
 #DOWNLOADER_MIDDLEWARES = {
 #    "newsparse.middlewares.NewsparseDownloaderMiddleware": 543,
 #}
+
+DOWNLOADER_MIDDLEWARES = {
+    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+}
+# SPLASH_URL = 'http://localhost:8050'
+
+# DOWNLOADER_MIDDLEWARES = {
+#     'scrapy_splash.SplashCookiesMiddleware': 723,
+#     'scrapy_splash.RefreshRequestMiddleware': 725,
+#     'scrapy_splash.HttpAuthMiddleware': 700,
+# }
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html

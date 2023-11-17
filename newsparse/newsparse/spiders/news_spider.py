@@ -15,23 +15,24 @@ db_name = 'parsenews.db'
 # from .funcs import create_tables_and_add_resources
 # create_tables_and_add_resources(db_name, resources)
 
+
+selects = []
 # Выводим меню для выбора новостного сайта
 site_choice = input(f'Выбери новостной сайт для парсинга: '
                     f'1-nur.kz; '
                     f'2-scientificrussia.ru; '
                     f'3-tengrinews.kz; '
-                    f'0-Выход'
+                    f'0-Выход;'
                     f'__: ')
 if site_choice == '0':
     quit()
-if site_choice == '1':
+elif site_choice == '1':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал nur.kz';"
-if site_choice == '2':
+elif site_choice == '2':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал scientificrussia.ru';"
-if site_choice == '3':
+elif site_choice == '3':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал tengrinews.kz';"
 
-# Запускаем парсинг-таймер
 start_time = time.time()
 
 # Связываемся с БД и производим выполнение выбранной команды
@@ -130,99 +131,22 @@ class NewsSpider(scrapy.Spider):
         # Получение переменной css-селектора для получения даты и времени новости
         css_date_arg = date_cut_args[1]
         date_time = str(response.css(css_date_arg).get()).strip()
+        # import time
+        from dateparser import parse
+        date = parse(date_time)
+        nd_date = int(time.mktime(date.timetuple()))
+        not_date = date.strftime('%d-%m-%Y')
 
-        # Получение формата даты и времени из таблицы resource
-        date_str = date_cut_args[0]
+        # Получение времени внесения данных в БД
+        s_date = floor(time.time())
+        # Вызов функции добавления данных новости в таблицу items БД
+        add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date)
+        # Остановка парсинг-таймера
+        end_time = time.time()
+        print(f'ДЛИТЕЛЬНОСТЬ ПАРСИНГА: {round(end_time - start_time, 2)} СЕКУНД')
+        # Для формирования словаря, который можно сохранять в json-файл
+        yield {
+            "res_id": resource_id, "link": link, "title": title, "content": content,
+            "nd_date": nd_date, "s_date": s_date, "not_date": not_date
+        }
 
-        # Ниже идут два блока с обработкой условий представления дат на сайтах
-        # Условный блок1
-        # Проверка на наличие двух простых форматов даты и времени
-        if date_str == '%Y-%m-%dT%H:%M:%S%z' or date_str == '%Y-%m-%d %H:%M':
-            from datetime import datetime
-            from math import floor
-            datetime_obj = datetime.strptime(date_time, date_str)
-            # Конвертируем в Unix timestamp
-            nd_date = int(datetime_obj.timestamp())
-
-            # Получение даты со страницы с новостью в формате Год-Месяц-День
-            not_date = datetime_obj.strftime('%d-%m-%Y')
-
-            # Получение времени внесения в БД
-            s_date = floor(time.time())
-
-            # Вызов функции добавления данных новости в таблицу items БД
-            add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date)
-
-            # Остановка парсинг-таймера
-            end_time = time.time()
-            print(f'ДЛИТЕЛЬНОСТЬ ПАРСИНГА: {round(end_time - start_time, 2)} СЕКУНД')
-
-            # Для формирования словаря, который можно сохранять в json-файл
-            yield {
-                "res_id": resource_id, "link": link, "title": title, "content": content,
-                "nd_date": nd_date, "s_date": s_date, "not_date": not_date
-            }
-
-        # Условный блок2
-        # Проверка на наличие сложного формата даты и времени
-        elif date_str == '(СегодняOrВчераOr%d%b%Y)comma%H:%M':
-
-            # Словарь для перевода названия месяца из родительного падежа в двухцифровую запись
-            month_dict = {
-                'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04', 'мая': '05', 'июня': '06',
-                'июля': '07', 'августа': '08', 'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12'
-            }
-
-            # Формируем список даты и времени
-            dt_list = date_time.split(",")
-
-            # Проверяем элемент списка на наличие слова 'Сегодня'
-            if dt_list[0] == 'Сегодня':
-                # Получаем сегодняшнюю дату
-                today = datetime.date.today()
-                dtm = today.strftime("%d-%m-%Y")
-                # Получаем сегодняшнюю дату в формате unixtime
-                dt = floor(time.mktime(time.strptime(dtm, "%d-%m-%Y")))
-
-            # Проверяем элемент списка на наличие слова 'Вчера'
-            if dt_list[0] == 'Вчера':
-                # Получаем сегодняшнюю дату
-                today = datetime.date.today()
-                dtm = today.strftime("%d-%m-%Y")
-                # Получаем вчерашнюю дату в формате unixtime засчет вычета 86400 сек
-                dt = floor(time.mktime(time.strptime(dtm, "%d-%m-%Y"))) - 86400
-
-            # Проверяем элемент списка на отсутствие слов 'Сегодня' и 'Вчера' (условно третий случай)
-            # Пусть мы имеем список dt_list = ['14 ноября 2023', '15:24'] произошедший
-            # от строки date_time = '14 ноября 2023, 15:24'
-            if dt_list[0] not in ['Сегодня', 'Вчера']:
-                # Разбиваем нулевой элемент, например, '14 ноября 2023' на список элементов ['14', 'ноября', '2023']
-                dtml = dt_list[0].split(' ')
-
-                # Затем с помощью переводного словаря превращаем элемент 'ноября' спика в '11',
-                # из-за чего теперь ['14', '11', '2023']
-                dtml[1] = month_dict[dtml[1]]
-                # Соединяем элементы списка через дефис в строку: '14-11-2023'
-                dtm = '-'.join(dtml)
-                # И уже из этого получаем дату в формате unixtime - это 631152000 сек с 1 января 1970 года
-                dt = floor(time.mktime(time.strptime(dtm, "%d-%m-%Y")))
-
-            # Оставшийся элемент '15:24' после запятой %H:%M делим на два элемента, tml = ['15', '24']
-            tml = dt_list[1].split(':')
-            tm = 60 * (60 * int(tml[0].strip()) + int(tml[1].strip())) # 15:24 - 55440 секунд с начала даты 14-11-2023
-            nd_date = dt + tm  # что в сумме нам даст 631207440 секунд формата unixtime для строки '14 ноября 2023, 15:24'
-            not_date = datetime.datetime.fromtimestamp(nd_date).strftime("%d-%m-%Y") # получаем формат День-Месяц-Год
-            s_date = floor(time.time()) # Текущее время в unixtime непосредственно перед сохранением в БД
-
-            # Вызов функции добавления данных новости в таблицу items БД
-            add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date)
-
-            # Остановка парсинг-таймера
-            end_time = time.time()
-            print(f'ДЛИТЕЛЬНОСТЬ ПАРСИНГА: {round(end_time - start_time, 2)} СЕКУНД')
-
-            # Для формирования словаря, который можно сохранять в json-файл
-            yield {
-                "res_id": resource_id, "link": link, "title": title, "content": content,
-                "nd_date": nd_date, "s_date": s_date, "not_date": not_date
-            }
