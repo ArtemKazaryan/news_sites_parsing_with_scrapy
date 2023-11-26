@@ -5,11 +5,12 @@ import sqlite3
 # Импортируем функцию add_to_items из funcs.py
 from .funcs import add_to_items
 
+
 # Задаём базы данных
 db_name = 'parsenews.db'
 
-# Строки 12, 13, 14, 15 и 16 НЕ РАСКОММЕНТИРОВЫВАТЬ!!!
-# Импортируем список кортежей для работы с sqlite3 из  resources.py
+# # Строки с 12 по 17 НЕ РАСКОММЕНТИРОВЫВАТЬ!!!
+# # Импортируем список кортежей для работы с sqlite3 из  resources.py
 # from .resources import resources
 # # Импортируем функцию create_tables_and_add_resources из funcs.py
 # from .funcs import create_tables_and_add_resources
@@ -33,7 +34,8 @@ elif site_choice == '2':
 elif site_choice == '3':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал tengrinews.kz';"
 
-start_time = time.time()
+# # Запуск парсинг-таймера
+# start_time = time.time()
 
 # Связываемся с БД и производим выполнение выбранной команды
 conn = sqlite3.connect(db_name)
@@ -54,6 +56,7 @@ bottom_tag_args = res[4].split(', ')
 title_cut_args = res[5].split(', ')
 date_cut_args = res[6].split(', ')
 
+
 # Создаём класс паука и его методов
 class NewsSpider(scrapy.Spider):
     name = 'news_spider'
@@ -65,14 +68,26 @@ class NewsSpider(scrapy.Spider):
     def parse(self, response):
         # При наличии параметра scrolling сайта
         if depth_mode[0] == 'scrolling':
-            from .funcs import scroll_load
-            # Формируем удобочитаемые переменные для передачи их в функцию scroll_load
-            level_depth, load_pause = int(depth_mode[1]) - 1, int(depth_mode[2])
+
+            # Импортируем функции для дозагрузки данных на странице: scroll_load (Selenium) и end_load (Playwright)
+            from .funcs import scroll_load, end_load
+            from bs4 import BeautifulSoup
+            # Формируем удобочитаемые переменные для передачи их в функцию scroll_load или в функцию end_load
+            level_depth, load_pause = int(depth_mode[1]) - 1, float(depth_mode[2])
             menu_url, div1_tag_class, div1_tag, a_tag_class, a_tag =\
                 resource_url_args[0], top_tag_args[0], top_tag_args[1], top_tag_args[2], top_tag_args[3]
 
             # Получаем URL-адреса новостей
-            links = scroll_load(level_depth, load_pause, menu_url, div1_tag_class, div1_tag, a_tag_class, a_tag)
+            html = scroll_load(level_depth, load_pause, menu_url)
+            # html = end_load(level_depth, load_pause, menu_url)
+            soup = BeautifulSoup(html, "html.parser")
+            links0 = soup.find_all(div1_tag, class_=div1_tag_class)
+            links = []
+            for link0 in links0:
+                links1 = link0.find_all(a_tag, class_=a_tag_class)
+                for link1 in links1:
+                    links.insert(0, link1["href"])
+
             # Передаём их URL-адреса в функцию парсинга parse_news
             for link in links:
                 yield response.follow(link, callback=self.parse_news)
@@ -109,7 +124,7 @@ class NewsSpider(scrapy.Spider):
         # Импортируем модуль для округления в меньшую сторону
         from math import floor
         # Импортируем модуль получения даты
-        import datetime
+        from dateparser import parse
 
         # Получаем ссылку как атрибут объекта response, переданную  в генераторе функции parse
         link = response.url
@@ -131,8 +146,6 @@ class NewsSpider(scrapy.Spider):
         # Получение переменной css-селектора для получения даты и времени новости
         css_date_arg = date_cut_args[1]
         date_time = str(response.css(css_date_arg).get()).strip()
-        # import time
-        from dateparser import parse
         date = parse(date_time)
         nd_date = int(time.mktime(date.timetuple()))
         not_date = date.strftime('%d-%m-%Y')
@@ -141,9 +154,7 @@ class NewsSpider(scrapy.Spider):
         s_date = floor(time.time())
         # Вызов функции добавления данных новости в таблицу items БД
         add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date)
-        # Остановка парсинг-таймера
-        end_time = time.time()
-        print(f'ДЛИТЕЛЬНОСТЬ ПАРСИНГА: {round(end_time - start_time, 2)} СЕКУНД')
+
         # Для формирования словаря, который можно сохранять в json-файл
         yield {
             "res_id": resource_id, "link": link, "title": title, "content": content,
