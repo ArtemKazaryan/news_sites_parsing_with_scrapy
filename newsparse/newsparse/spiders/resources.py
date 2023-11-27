@@ -10,8 +10,14 @@ resources = [
         ('Новостной портал tengrinews.kz',
          'https://tengrinews.kz/news, pagination 1 5 1 f"https://tengrinews.kz/news/page/{i}"',
          'tn-article-grid, div, tn-link, a',
-         'tn-news-content, div', 'tn-content-title, h1', '(СегодняOrВчераOr%d%b%Y)comma%H:%M, time::text')
+         'tn-news-content, div', 'tn-content-title, h1', '(СегодняOrВчераOr%d%b%Y)comma%H:%M, time::text'),
+        ('Горнопромышленный портал mining.kz',
+         'https://mining.kz/ru/novosti-kazakhstana, pagination 1 5 1 f"https://mining.kz/ru/novosti-kazakhstana?start={i-1}0"',
+         'itemList, div, , a',
+         'itemFullText, div', 'itemTitle, h1', '(ДеньНедели)comma%d%b%Y, span.itemDateCreated::text')
 ]
+
+
 
 
 # Резервные переменные

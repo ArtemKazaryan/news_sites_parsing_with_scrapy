@@ -23,6 +23,7 @@ site_choice = input(f'Выбери новостной сайт для парси
                     f'1-nur.kz; '
                     f'2-scientificrussia.ru; '
                     f'3-tengrinews.kz; '
+                    f'4-mining.kz; '
                     f'0-Выход;'
                     f'__: ')
 if site_choice == '0':
@@ -33,6 +34,8 @@ elif site_choice == '2':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал scientificrussia.ru';"
 elif site_choice == '3':
     select = "SELECT * FROM resource WHERE resource_name='Новостной портал tengrinews.kz';"
+elif site_choice == '4':
+    select = "SELECT * FROM resource WHERE resource_name='Горнопромышленный портал mining.kz';"
 
 # # Запуск парсинг-таймера
 # start_time = time.time()
@@ -42,6 +45,7 @@ conn = sqlite3.connect(db_name)
 cur = conn.cursor()
 cur.execute(select)
 result = cur.fetchone()
+print(f'************************************{result}')
 res = list(result)
 
 # Производим передачу и распаковку данных из таблицы resource
@@ -119,6 +123,7 @@ class NewsSpider(scrapy.Spider):
                 for i in range(int(start)+1, int(end)+1, int(step)):
                     next_page = eval(page_link)
                     yield response.follow(next_page, callback=self.parse)
+
 
     def parse_news(self, response):
         # Импортируем модуль для округления в меньшую сторону
