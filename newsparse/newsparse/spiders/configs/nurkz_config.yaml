@@ -1,0 +1,14 @@
+# Локальные настройки
+start_urls: [ 'https://nur.kz/' ]
+allowed_domains: [ 'nur.kz' ]
+max_depth: 0
+concurrency: 10  # раскомментировать AUTOTHROTTLE_TARGET_CONCURRENCY = 10 в settings.py
+user_agent: ['Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Version/9.1.2 Safari/601.7.7',
+             'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.19 (KHTML, like Gecko) Chrome/1.0.154.36 Safari/525.19']
+
+# Структуры для извлечения данных
+title_tag: h1
+title_class: main-headline js-main-headline
+content_tag: div
+content_class: formatted-body__content--wrapper
+date_cut: time::attr(datetime)

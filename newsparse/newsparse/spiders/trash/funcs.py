@@ -48,18 +48,18 @@ def create_tables_and_add_resources(db_name, resources):
     """)
     conn.commit()
 
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS items(
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        res_id INT,
-        link TEXT,
-        title TEXT,
-        content TEXT,
-        nd_date TEXT,
-        s_date TEXT,
-        not_date TEXT);
-    """)
-    conn.commit()
+    # cur = conn.cursor()
+    # cur.execute("""CREATE TABLE IF NOT EXISTS items(
+    #     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    #     res_id INT,
+    #     link TEXT,
+    #     title TEXT,
+    #     content TEXT,
+    #     nd_date TEXT,
+    #     s_date TEXT,
+    #     not_date TEXT);
+    # """)
+    # conn.commit()
 
     cur.executemany("INSERT INTO resource(resource_name, resource_url, top_tag, bottom_tag, title_cut, date_cut)"
                     " VALUES(?, ?, ?, ?, ?, ?);", resources)
@@ -67,7 +67,7 @@ def create_tables_and_add_resources(db_name, resources):
     conn.close()
 
 
-def add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date):
+def add_to_items(db_name: str, resource_id: str, link: str, title: str, content: str, nd_date: str, s_date: str, not_date: str) -> None:
     conn = sqlite3.connect(db_name)
     cur = conn.cursor()
     news_item_obj = (resource_id, link, title, content, nd_date, s_date, not_date)

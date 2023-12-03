@@ -2,23 +2,16 @@
 import scrapy
 import time
 import sqlite3
-# Импортируем функцию add_to_items из funcs.py
-from .funcs import add_to_items
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+import yaml
 
+# Импортируем модуль для округления в меньшую сторону
+from math import floor
+# Импортируем модуль получения даты
+from dateparser import parse
 
-# Задаём базы данных
-db_name = 'parsenews.db'
-
-# # Строки с 12 по 17 НЕ РАСКОММЕНТИРОВЫВАТЬ!!!
-# # Импортируем список кортежей для работы с sqlite3 из  resources.py
-# from .resources import resources
-# # Импортируем функцию create_tables_and_add_resources из funcs.py
-# from .funcs import create_tables_and_add_resources
-# create_tables_and_add_resources(db_name, resources)
-
-
-selects = []
-# Выводим меню для выбора новостного сайта
+#  Задаем имя конфигурационного источника через меню
 site_choice = input(f'Выбери новостной сайт для парсинга: '
                     f'1-nur.kz; '
                     f'2-scientificrussia.ru; '
@@ -29,140 +22,106 @@ site_choice = input(f'Выбери новостной сайт для парси
 if site_choice == '0':
     quit()
 elif site_choice == '1':
-    select = "SELECT * FROM resource WHERE resource_name='Новостной портал nur.kz';"
+    yaml_file_name = 'nurkz_config.yaml'
 elif site_choice == '2':
-    select = "SELECT * FROM resource WHERE resource_name='Новостной портал scientificrussia.ru';"
+    yaml_file_name = 'scientificrussiaru_config.yaml'
 elif site_choice == '3':
-    select = "SELECT * FROM resource WHERE resource_name='Новостной портал tengrinews.kz';"
+    yaml_file_name = 'tengrinewskz_config.yaml'
 elif site_choice == '4':
-    select = "SELECT * FROM resource WHERE resource_name='Горнопромышленный портал mining.kz';"
+    yaml_file_name = 'miningkz_config.yaml'
+else:
+    quit()
 
-# # Запуск парсинг-таймера
-# start_time = time.time()
+# # Задаем имя конфигурационного источника вручную
+# yaml_file_name = 'miningkz_config.yaml'
 
-# Связываемся с БД и производим выполнение выбранной команды
-conn = sqlite3.connect(db_name)
-cur = conn.cursor()
-cur.execute(select)
-result = cur.fetchone()
-print(f'************************************{result}')
-res = list(result)
-
-# Производим передачу и распаковку данных из таблицы resource
-# ДЛЯ НАГЛЯДНОСТИ переопределяем переменные
-resource_id = res[0]
-resource_url_args = res[2].split(', ')
-depth_config = resource_url_args[1].split(', ')
-depth_mode = depth_config[0].split(' ')
-
-top_tag_args = res[3].split(', ')
-bottom_tag_args = res[4].split(', ')
-title_cut_args = res[5].split(', ')
-date_cut_args = res[6].split(', ')
-
+# Считываем содержимое конфигурационного файла
+with open((f'configs/{yaml_file_name}'), 'r') as file:
+    set_a_ = yaml.load(file, Loader=yaml.FullLoader)
 
 # Создаём класс паука и его методов
 class NewsSpider(scrapy.Spider):
     name = 'news_spider'
-    start_urls = {
-        resource_url_args[0]
-    }
 
-    # Метод парсинга, в котором производится получение URL-адресов новостей
+    # Импортируем настройки паука
+    start_urls = set_a_['start_urls']
+    allowed_domains = set_a_['allowed_domains']
+    max_depth = set_a_['max_depth']
+    concurrent_requests = set_a_['concurrency']
+    user_agent = set_a_['user_agent']
+
+
     def parse(self, response):
-        # При наличии параметра scrolling сайта
-        if depth_mode[0] == 'scrolling':
-
-            # Импортируем функции для дозагрузки данных на странице: scroll_load (Selenium) и end_load (Playwright)
-            from .funcs import scroll_load, end_load
-            from bs4 import BeautifulSoup
-            # Формируем удобочитаемые переменные для передачи их в функцию scroll_load или в функцию end_load
-            level_depth, load_pause = int(depth_mode[1]) - 1, float(depth_mode[2])
-            menu_url, div1_tag_class, div1_tag, a_tag_class, a_tag =\
-                resource_url_args[0], top_tag_args[0], top_tag_args[1], top_tag_args[2], top_tag_args[3]
-
-            # Получаем URL-адреса новостей
-            html = scroll_load(level_depth, load_pause, menu_url)
-            # html = end_load(level_depth, load_pause, menu_url)
-            soup = BeautifulSoup(html, "html.parser")
-            links0 = soup.find_all(div1_tag, class_=div1_tag_class)
-            links = []
-            for link0 in links0:
-                links1 = link0.find_all(a_tag, class_=a_tag_class)
-                for link1 in links1:
-                    links.insert(0, link1["href"])
-
-            # Передаём их URL-адреса в функцию парсинга parse_news
+        depth = response.meta.get('depth', 0)  # текущая глубина
+        # Если текущая глубина меньше или равна заданной глубине
+        if depth <= self.max_depth:
+            # Собираем все ссылки с текущей страницы
+            links = response.css('a::attr(href)').getall()
             for link in links:
-                yield response.follow(link, callback=self.parse_news)
-
-        # При наличии параметра pagination сайта
-        elif depth_mode[0] == 'pagination':
-            # Получение удобочитаемых переменных
-            start, end, step, page_link = depth_mode[1], depth_mode[2], depth_mode[3], depth_mode[4]
-            div1_tag_class, div1_tag, a_tag_class, a_tag = top_tag_args[0], top_tag_args[1], top_tag_args[2], top_tag_args[3]
-
-            # Проверка на пустые поля для корректной работы механизма xpath
-            if div1_tag_class != '':
-                div1_tag_class = f'[@class="{div1_tag_class}"]'
-            if a_tag_class != '':
-                a_tag_class = f'[@class="{a_tag_class}"]'
-
-            # Получаем URL-адреса новостей и передаём их URL-адреса в функцию парсинга parse_news
-            for link in response.xpath(f'//{div1_tag}{div1_tag_class}//{a_tag}{a_tag_class}/@href').extract():
-                yield response.follow(link, callback=self.parse_news)
-
-            # Проверка последовательности пагнации
-            # Справа налево
-            if int(start) > int(end):
-                for i in range(int(start), int(end)-1, int(step)):
-                    next_page = eval(page_link)
-                    yield response.follow(next_page, callback=self.parse)
-            # Слева направо
-            elif int(start) < int(end):
-                for i in range(int(start)+1, int(end)+1, int(step)):
-                    next_page = eval(page_link)
-                    yield response.follow(next_page, callback=self.parse)
+                if isinstance(link, str):
+                    if '+7' not in link and 'mailto' not in link:
+                        # Углубляемся
+                        yield response.follow(link, callback=self.parse, meta={'depth': depth + 1})
+        # Передаём ссылки уровня в анализатор структуры
+        yield from self.parse_news(response)
 
 
     def parse_news(self, response):
-        # Импортируем модуль для округления в меньшую сторону
-        from math import floor
-        # Импортируем модуль получения даты
-        from dateparser import parse
+        # Импорт структур для извлечения новости(мэссэджа)
+        title_tag = set_a_['title_tag']
+        title_class = set_a_['title_class']
+        content_tag = set_a_['content_tag']
+        content_class = set_a_['content_class']
+        date_cut = set_a_['date_cut']
 
         # Получаем ссылку как атрибут объекта response, переданную  в генераторе функции parse
         link = response.url
 
-        # Получение удобочитаемых переменных
-        h1_tag_class, h1_tag = title_cut_args[0], title_cut_args[1]
-        # Проверка на пустые поля для корректной работы механизма xpath
-        if h1_tag_class != '':
-            h1_tag_class = f'[@class="{h1_tag_class}"]'
-        title = str(response.xpath(f'//{h1_tag}{h1_tag_class}/text()').get()).strip()
+        # Парсим заголовок новости
+        if title_class:
+            try:
+                title = str(response.xpath(f'//{title_tag}[@class="{title_class}"]//text()').get()).strip()
+            except:
+                title = None
+        else:
+            try:
+                title = str(response.xpath(f'//{title_tag}//text()').get()).strip()
+            except:
+                title = None
 
-        # Получение удобочитаемых переменных
-        div2_tag_class, div2_tag = bottom_tag_args[0], bottom_tag_args[1]
-        # Проверка на пустые поля для корректной работы механизма xpath
-        if div2_tag_class != '':
-            div2_tag_class = f'[@class="{div2_tag_class}"]'
-        content = ''.join(response.xpath(f'//{div2_tag}{div2_tag_class}//text()').getall()).strip()
+        #  Парсим содержание новости
+        if content_class:
+            try:
+                content = ''.join(response.xpath(f'//{content_tag}[@class="{content_class}"]//text()').getall()).strip()
+            except:
+                content = None
+        else:
+            try:
+                content = ''.join(response.xpath(f'//{content_tag}//text()').getall()).strip()
+            except:
+                content = None
 
-        # Получение переменной css-селектора для получения даты и времени новости
-        css_date_arg = date_cut_args[1]
-        date_time = str(response.css(css_date_arg).get()).strip()
+        #  Парсим дату и время новости
+        try:
+            date_time = str(response.css(date_cut).get()).strip()
+        except:
+            date_time = None
+
+        # Парсим дату в универсальный для обработки формат
         date = parse(date_time)
+
+        # Получаем дату и время в формате unixtime
         nd_date = int(time.mktime(date.timetuple()))
+
+        # Получаем дату и время в формате unixtime
         not_date = date.strftime('%d-%m-%Y')
 
-        # Получение времени внесения данных в БД
+        #  Парсим дату и время новости
         s_date = floor(time.time())
-        # Вызов функции добавления данных новости в таблицу items БД
-        add_to_items(db_name, resource_id, link, title, content, nd_date, s_date, not_date)
 
-        # Для формирования словаря, который можно сохранять в json-файл
-        yield {
-            "res_id": resource_id, "link": link, "title": title, "content": content,
-            "nd_date": nd_date, "s_date": s_date, "not_date": not_date
-        }
-
+        # Сохраняем полноценные новостные структуры
+        if title and content and date_time:
+            yield {
+                "link": link, "title": title, "content": content,
+                "nd_date": nd_date, "s_date": s_date, "not_date": not_date
+            }
