@@ -36,7 +36,7 @@ CONCURRENT_REQUESTS = 10
 #COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
-#TELNETCONSOLE_ENABLED = False
+TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
 #DEFAULT_REQUEST_HEADERS = {
@@ -84,7 +84,7 @@ AUTOTHROTTLE_ENABLED = True
 # AUTOTHROTTLE_MAX_DELAY = 60
 # # The average number of requests Scrapy should be sending in parallel to
 # # each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 10
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # # Enable showing throttling stats for every response received:
 # AUTOTHROTTLE_DEBUG = False
 

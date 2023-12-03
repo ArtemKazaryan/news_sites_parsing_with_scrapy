@@ -1,10 +1,11 @@
 # Импортируем модуль scrapy
 import scrapy
 import time
-import sqlite3
+import yaml
+
+# Импортируем модули для работы с заданием кроулинг-правил пауку
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
-import yaml
 
 # Импортируем модуль для округления в меньшую сторону
 from math import floor
@@ -40,7 +41,9 @@ with open((f'configs/{yaml_file_name}'), 'r') as file:
     set_a_ = yaml.load(file, Loader=yaml.FullLoader)
 
 # Создаём класс паука и его методов
+# class NewsSpider(CrawlSpider):
 class NewsSpider(scrapy.Spider):
+
     name = 'news_spider'
 
     # Импортируем настройки паука
@@ -49,7 +52,7 @@ class NewsSpider(scrapy.Spider):
     max_depth = set_a_['max_depth']
     concurrent_requests = set_a_['concurrency']
     user_agent = set_a_['user_agent']
-
+    # rules = [Rule(LinkExtractor(), callback="parse", follow=True)]
 
     def parse(self, response):
         depth = response.meta.get('depth', 0)  # текущая глубина
